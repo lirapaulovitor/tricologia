@@ -803,6 +803,7 @@ async function startGame(){
 }
 
 // Submit
+let _lastTd=null;
 async function submitTurn(){
   if(G.over)return;
   const txt=$('rTxt').value.trim(),ph=G.phase;
@@ -811,38 +812,78 @@ async function submitTurn(){
   else if(ph==='reason')td.base_teorica=$('fwSel').value;
   else if(ph==='decide')td.conduta=$('decSel').value;
   td.pareceres=G.consults.slice();
+  _lastTd=td;
 
-  $('btnSub').disabled=true;$('rTxt').disabled=true;setLdg(true);
+  // Hide form, show full loading
+  $('btnSub').disabled=true;$('rTxt').disabled=true;
+  $('areaInv').classList.add('hidden');$('areaFw').classList.add('hidden');$('areaDec').classList.add('hidden');
+  document.querySelector('.rform').classList.add('hidden');
+  document.querySelector('.arow').classList.add('hidden');
+  setLdg(true);
 
-  let retries=0,parsed=null;
+  let retries=0,parsed=null,lastErr=null;
   while(retries<3&&!parsed){
     try{
       const msgs=buildTurnMsgs(td);
       const r=await callAPI(null,msgs);
       parsed=parseJ(r);
-    }catch(e){console.error('Attempt',retries,e);}
+      if(!parsed)lastErr='Resposta inválida da IA';
+    }catch(e){console.error('Attempt',retries,e);lastErr=e.message;}
     retries++;
+    if(!parsed&&retries<3)await new Promise(r=>setTimeout(r,1000));
   }
+
+  setLdg(false);
 
   if(parsed){
     G.hist.push({...td,aval:parsed.avaliacao_curta||'',deltas:parsed.indicadores_delta||[0,0,0,0]});
     updGauges(parsed.indicadores_delta);
 
-    if(parsed.conduta_inadequada){G.over=true;await endGame('derrota','Conduta inadequada detectada.');setLdg(false);return;}
-    if(G.ind[2]<=15||G.ind[3]<=15){G.over=true;await endGame('derrota',parsed.narrativa||'Indicadores críticos.');setLdg(false);return;}
-    if(G.turn>=G.maxTurns){G.over=true;await endGame(null,null);setLdg(false);return;}
+    if(parsed.conduta_inadequada){G.over=true;await endGame('derrota','Conduta inadequada detectada.');return;}
+    if(G.ind[2]<=15||G.ind[3]<=15){G.over=true;await endGame('derrota',parsed.narrativa||'Indicadores críticos.');return;}
+    if(G.turn>=G.maxTurns){G.over=true;await endGame(null,null);return;}
 
     G.turn++;G.phase=getPhase(G.turn);G.inv=[];G.consults=[];
     updateTurn();updatePhaseUI();renderGauges();
     $('sceneLbl').textContent=`Turno ${G.turn} · ${phLabel(G.phase)}`;
     $('narrTxt').textContent=parsed.narrativa||'';
+    // Restore form
+    document.querySelector('.rform').classList.remove('hidden');
+    document.querySelector('.arow').classList.remove('hidden');
     if(G.phase==='observe'){show('areaInv');document.querySelectorAll('.inv-opt').forEach(o=>o.classList.remove('sel'));}
     $('rTxt').value='';$('rTxt').disabled=false;$('wcTxt').textContent='0 palavras';$('wcDiv').className='wc';$('fwSel').value='';$('decSel').value='';
     valForm();saveSess();
   }else{
-    $('rTxt').disabled=false;$('narrTxt').textContent+='\n\n⚠️ Erro ao processar. Tente enviar novamente.';$('btnSub').disabled=false;
+    showRetryUI(lastErr);
   }
+}
+
+function showRetryUI(errMsg){
   setLdg(false);
+  $('narrBox').innerHTML=`<div style="text-align:center;padding:20px 0;">
+    <div style="font-size:32px;margin-bottom:12px;">⚠️</div>
+    <div style="font-size:1rem;font-weight:600;color:var(--accent-red);margin-bottom:8px;">Erro ao processar sua resposta</div>
+    <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:20px;">${errMsg||'Falha na comunicação com a IA'}. Sua resposta foi preservada.</div>
+    <button class="btn btn-primary" onclick="retryLastTurn()" style="margin:0 auto;">Tentar novamente</button>
+  </div>`;
+  // Hide form (response is preserved in _lastTd)
+  document.querySelector('.rform').classList.add('hidden');
+  document.querySelector('.arow').classList.add('hidden');
+}
+
+function retryLastTurn(){
+  if(!_lastTd)return;
+  // Restore narrative
+  $('narrBox').innerHTML=`<span class="slbl" id="sceneLbl">Turno ${G.turn} · ${phLabel(G.phase)}</span><span id="narrTxt">Processando novamente...</span>`;
+  // Re-fill form and resubmit
+  G.inv=_lastTd.tipo_investigacao||[];
+  $('rTxt').value=_lastTd.resposta;$('rTxt').disabled=false;
+  if(_lastTd.base_teorica)$('fwSel').value=_lastTd.base_teorica;
+  if(_lastTd.conduta)$('decSel').value=_lastTd.conduta;
+  document.querySelector('.rform').classList.remove('hidden');
+  document.querySelector('.arow').classList.remove('hidden');
+  updatePhaseUI();
+  submitTurn();
 }
 
 function setLdg(v){$('ldgArea').classList.toggle('hidden',!v);}
@@ -1003,17 +1044,21 @@ Retorne APENAS JSON (sem markdown):
 {"nome_cliente":"nome brasileiro","genero":"M ou F","idade":número,"queixa_principal":"frase curta na linguagem do paciente","cena_inicial":"narrativa em 2ª pessoa de quando o cliente chega. Máx 4 parágrafos. Ambiental, emocional, observações iniciais visíveis.","caso_interno":"caso completo para uso interno: diagnóstico real, sinais esperados, achados por tipo de investigação, gravidade, se precisa encaminhamento"}`;
 }
 
-// Turn messages
+// Turn messages — system prompt goes via callAPI, messages are context + current turn
 function buildTurnMsgs(td){
   const m=[];
-  m.push({role:'user',content:gSys()});
-  m.push({role:'assistant',content:'Entendido. Avaliarei as respostas seguindo todas as regras.'});
-  if(G.brief){m.push({role:'user',content:`BRIEFING:\n${JSON.stringify(G.brief)}`});m.push({role:'assistant',content:'Caso carregado.'});}
+  // Briefing as assistant's first message (the case setup)
+  if(G.brief){
+    m.push({role:'user',content:'BRIEFING DO CASO'});
+    m.push({role:'assistant',content:JSON.stringify(G.brief)});
+  }
+  // History (compacted)
   if(G.hist.length>0){
     const log=G.hist.map(h=>`T${h.turno}|${h.fase}|${Array.isArray(h.tipo_investigacao)?h.tipo_investigacao.join('+'):(h.base_teorica||h.conduta||'-')}|"${h.resposta.substring(0,200)}"|Δ[${h.deltas.join(',')}]`).join('\n');
     m.push({role:'user',content:`HISTÓRICO:\n${log}\nInd:[${G.ind.join(',')}]`});
     m.push({role:'assistant',content:'Registrado.'});
   }
+  // Current turn
   let p=`TURNO ${td.turno}/${G.maxTurns} — Fase: ${td.fase.toUpperCase()}`;
   if(td.tipo_investigacao&&td.tipo_investigacao.length)p+=`\nInvestigações escolhidas: ${td.tipo_investigacao.map(i=>INVT[i]).join(', ')}`;
   if(td.base_teorica)p+=`\nBase teórica: ${FW[td.base_teorica]}`;
@@ -1028,8 +1073,7 @@ function buildTurnMsgs(td){
 function buildConsultMsgs(type){
   const m=[],nm=type==='dermatologista'?'Dra. Renata Almeida, dermatologista':'Prof. Marcos Vieira, biólogo/pesquisador em tricologia';
   const foco=type==='dermatologista'?'sinais inflamatórios, cicatricial vs não cicatricial, biópsia, urgência':'mecanismos biológicos, ciclo capilar, vias moleculares, fisiológico vs patológico';
-  m.push({role:'user',content:gSys()});m.push({role:'assistant',content:'Ok.'});
-  if(G.brief){m.push({role:'user',content:`CASO:${JSON.stringify(G.brief)}`});m.push({role:'assistant',content:'Ok.'});}
+  if(G.brief){m.push({role:'user',content:'CASO DO CLIENTE'});m.push({role:'assistant',content:JSON.stringify(G.brief)});}
   if(G.hist.length>0){m.push({role:'user',content:`HIST:${G.hist.map(h=>`T${h.turno}|${h.fase}|"${h.resposta.substring(0,150)}"`).join('\n')}`});m.push({role:'assistant',content:'Ok.'});}
   m.push({role:'user',content:`O aluno solicita parecer de ${nm}. Foco: ${foco}.
 O parecer deve: ser em 1ª pessoa, 3-5 parágrafos, oferecer perspectiva sem dar resposta direta, levantar hipóteses que o aluno deveria considerar, ser coerente com o caso.
@@ -1040,8 +1084,7 @@ JSON: {"parecer":"texto"}`});
 // Diagnosis messages
 function buildDiagMsgs(){
   const m=[];
-  m.push({role:'user',content:gSys()});m.push({role:'assistant',content:'Ok.'});
-  if(G.brief){m.push({role:'user',content:`CASO:${JSON.stringify(G.brief)}`});m.push({role:'assistant',content:'Ok.'});}
+  if(G.brief){m.push({role:'user',content:'CASO DO CLIENTE'});m.push({role:'assistant',content:JSON.stringify(G.brief)});}
   const log=G.hist.map(h=>`T${h.turno}|${h.fase}|${Array.isArray(h.tipo_investigacao)?h.tipo_investigacao.join('+'):(h.base_teorica||h.conduta||'-')}|"${h.resposta}"|Δ[${h.deltas.join(',')}]|"${h.aval}"`).join('\n');
   m.push({role:'user',content:`DIAGNÓSTICO FINAL.\nHISTÓRICO:\n${log}\nIND FINAIS:[${G.ind.join(',')}] (${IND.join(', ')})
 
@@ -1050,30 +1093,34 @@ JSON: {"avaliacao_geral":"2-3 parágrafos","pontos_fortes":["..."],"modulos_revi
   return m;
 }
 
-// API call
-async function callAPI(sys,msgs){
-  let body;
-  if(sys&&(!msgs||!msgs.length)){body={model:MODEL,max_tokens:MAXTK,messages:[{role:'user',content:sys}]};}
-  else{body={model:MODEL,max_tokens:MAXTK,messages:msgs};}
-  if(body.messages.length>2){body.messages[0].cache_control={type:'ephemeral'};}
-  const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-  if(!r.ok)throw new Error(`API ${r.status}: ${await r.text()}`);
+// API call — matches Worker format (system separate from messages)
+async function callAPI(userPrompt,msgs){
+  const b={model:MODEL,max_tokens:MAXTK,system:[{type:'text',text:gSys(),cache_control:{type:'ephemeral'}}]};
+  b.messages=userPrompt?[{role:'user',content:userPrompt}]:msgs;
+  const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+  if(!r.ok){const txt=await r.text();throw new Error('Erro '+r.status+': '+txt.substring(0,300));}
   const d=await r.json();
-  if(d.content&&Array.isArray(d.content))return d.content.map(c=>c.text||'').join('');
-  if(d.choices)return d.choices[0]?.message?.content||'';
-  if(typeof d==='string')return d;
-  return JSON.stringify(d);
+  return d.content.find(c=>c.type==='text')?.text||'';
 }
 
-// JSON parser (5 strategies)
+// JSON parser — robust version matching A Marca
 function parseJ(t){
   if(!t)return null;
-  try{return JSON.parse(t);}catch(e){}
-  let m=t.match(/```(?:json)?\s*([\s\S]*?)```/);if(m)try{return JSON.parse(m[1].trim());}catch(e){}
-  m=t.match(/\{[\s\S]*\}/);if(m)try{return JSON.parse(m[0]);}catch(e){}
-  if(m){let c=m[0].replace(/,\s*([}\]])/g,'$1').replace(/'/g,'"').replace(/[\x00-\x1F\x7F]/g,' ');try{return JSON.parse(c);}catch(e){}}
-  try{const o={};const rx=/"(\w+)"\s*:\s*("(?:[^"\\]|\\.)*"|\[[\s\S]*?\]|-?\d+\.?\d*|true|false|null)/g;let mt;while((mt=rx.exec(t))!==null){try{o[mt[1]]=JSON.parse(mt[2]);}catch(e){o[mt[1]]=mt[2].replace(/^"|"$/g,'');}}if(Object.keys(o).length>0)return o;}catch(e){}
-  console.warn('Parse failed:',t.substring(0,200));return null;
+  let c=t.trim();
+  // Remove markdown code fences
+  c=c.replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,'');
+  // Remove any text before the first {
+  const fi=c.indexOf('{');if(fi>0)c=c.substring(fi);
+  // Remove any text after the last }
+  const li=c.lastIndexOf('}');if(li>=0&&li<c.length-1)c=c.substring(0,li+1);
+  // Try parsing
+  try{return JSON.parse(c);}catch(e){}
+  // Try fixing trailing commas
+  try{return JSON.parse(c.replace(/,\s*}/g,'}').replace(/,\s*]/g,']'));}catch(e){}
+  // Try extracting JSON object more aggressively
+  const m2=c.match(/\{[\s\S]*\}/);if(m2)try{return JSON.parse(m2[0]);}catch(e){}
+  console.error('Parse failed:',c.substring(0,300));
+  return null;
 }
 
 // Init
