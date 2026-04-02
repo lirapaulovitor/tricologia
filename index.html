@@ -604,10 +604,11 @@ body {
 </div>
 
 <!-- CONSULTANT PANEL -->
+<div id="cpBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:790;" onclick="closeCP()"></div>
 <div id="cpPanel" class="cpanel">
   <div class="cp-head">
     <h3>Parecer consultivo</h3>
-    <button class="cp-close" onclick="closeCP()">✕</button>
+    <button class="cp-close" onclick="closeCP()" style="font-size:20px;width:36px;height:36px;">✕</button>
   </div>
   <div class="cp-body">
     <div class="cp-cards" id="cpCards">
@@ -623,6 +624,9 @@ body {
       </div>
     </div>
     <div id="cpResp" class="hidden"></div>
+    <div style="margin-top:16px;text-align:center;padding-bottom:8px;">
+      <button class="btn btn-secondary" style="font-size:0.8rem;padding:10px 20px;width:100%;" onclick="closeCP()">Fechar painel</button>
+    </div>
   </div>
 </div>
 
@@ -825,9 +829,11 @@ async function submitTurn(){
   while(retries<3&&!parsed){
     try{
       const msgs=buildTurnMsgs(td);
+      console.log('Turn request msgs count:',msgs.length);
       const r=await callAPI(null,msgs);
+      console.log('Turn response length:',r?.length,'preview:',r?.substring(0,200));
       parsed=parseJ(r);
-      if(!parsed)lastErr='Resposta inválida da IA';
+      if(!parsed){console.error('Parse returned null for:',r?.substring(0,500));lastErr='Resposta inválida da IA';}
     }catch(e){console.error('Attempt',retries,e);lastErr=e.message;}
     retries++;
     if(!parsed&&retries<3)await new Promise(r=>setTimeout(r,1000));
@@ -949,8 +955,8 @@ function dlRpt(){
 }
 
 // Consultant
-function openCP(){$('cpPanel').classList.add('open');$('cpCards').classList.remove('hidden');$('cpResp').classList.add('hidden');}
-function closeCP(){$('cpPanel').classList.remove('open');}
+function openCP(){$('cpPanel').classList.add('open');$('cpBackdrop').style.display='block';$('cpCards').classList.remove('hidden');$('cpResp').classList.add('hidden');}
+function closeCP(){$('cpPanel').classList.remove('open');$('cpBackdrop').style.display='none';}
 async function reqConsult(type){
   const nm=type==='dermatologista'?'Dra. Renata Almeida':'Prof. Marcos Vieira';
   G.consults.push(type);
@@ -958,13 +964,15 @@ async function reqConsult(type){
   $('cpResp').innerHTML=`<div class="cp-resp"><div class="crl">Solicitando parecer de ${nm}...</div><div class="ldots" style="margin-top:8px"><span></span><span></span><span></span></div></div>`;
   try{
     const msgs=buildConsultMsgs(type);
+    console.log('Consult request:',JSON.stringify(msgs).substring(0,500));
     const r=await callAPI(null,msgs);
+    console.log('Consult response:',r?.substring(0,300));
     const p=parseJ(r);
     const parecer=p&&p.parecer?p.parecer:(r||'Não foi possível obter parecer no momento.');
-    $('cpResp').innerHTML=`<div class="cp-resp"><div class="crl">Parecer — ${nm}</div>${parecer}</div><div style="margin-top:12px;display:flex;gap:8px"><button class="btn btn-secondary" style="font-size:0.8rem;padding:8px 14px" onclick="openCP()">← Voltar</button><button class="btn btn-secondary" style="font-size:0.8rem;padding:8px 14px" onclick="closeCP()">Fechar</button></div>`;
+    $('cpResp').innerHTML=`<div class="cp-resp"><div class="crl">Parecer — ${nm}</div>${parecer}</div><div style="margin-top:16px;display:flex;gap:8px;justify-content:center"><button class="btn btn-primary" style="font-size:0.8rem;padding:10px 20px" onclick="closeCP()">Fechar e continuar</button></div>`;
   }catch(e){
     console.error('Consult error:',e);
-    $('cpResp').innerHTML=`<div class="cp-resp"><div class="crl">Parecer — ${nm}</div>Erro de conexão. Tente novamente.</div><div style="margin-top:12px;display:flex;gap:8px"><button class="btn btn-secondary" style="font-size:0.8rem;padding:8px 14px" onclick="openCP()">← Voltar</button><button class="btn btn-secondary" style="font-size:0.8rem;padding:8px 14px" onclick="closeCP()">Fechar</button></div>`;
+    $('cpResp').innerHTML=`<div class="cp-resp"><div class="crl">Parecer — ${nm}</div>Erro: ${e.message||'Falha de conexão'}</div><div style="margin-top:16px;display:flex;gap:8px;justify-content:center"><button class="btn btn-secondary" style="font-size:0.8rem;padding:10px 20px" onclick="openCP()">Tentar outro</button><button class="btn btn-primary" style="font-size:0.8rem;padding:10px 20px" onclick="closeCP()">Fechar e continuar</button></div>`;
   }
   saveSess();
 }
