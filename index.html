@@ -420,7 +420,7 @@ body {
 
 <button id="themeToggle" onclick="toggleTheme()" title="Alternar tema">🌙</button>
 
-<!-- TUTORIAL -->
+<!-- TUTORIAL 1: Contexto -->
 <div id="ovTut" class="overlay">
 <div class="overlay-content">
 <div class="tut-inner">
@@ -452,6 +452,64 @@ body {
     ⚠️ Você pode solicitar <strong>parecer consultivo</strong> de especialistas a qualquer momento — mas a decisão final é sua. Não pedir parecer quando deveria pode afetar a segurança do cliente.
   </div>
   <div style="text-align:center;margin-top:28px;">
+    <button class="btn btn-primary btn-lg" onclick="showTut2()">Continuar →</button>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- TUTORIAL 2: Como funciona o jogo -->
+<div id="ovTut2" class="overlay hidden">
+<div class="overlay-content">
+<div class="tut-inner">
+  <div style="text-align:center;margin-bottom:20px;">
+    <div style="font-size:28px;margin-bottom:8px;">📖</div>
+    <h1 style="font-family:var(--font-display);font-size:1.5rem;">Como funciona a simulação</h1>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:20px;">
+
+    <div class="tut-step">
+      <div style="font-size:1.2rem;flex-shrink:0;width:28px;text-align:center;">🎯</div>
+      <div class="st"><strong>Turnos e fases</strong> — A simulação tem entre 4 e 9 turnos, divididos em três fases: Observação, Raciocínio e Conduta. A cada turno, você escolhe o que investigar (ou como raciocinar, ou qual conduta tomar) e escreve sua justificativa.</div>
+    </div>
+
+    <div class="tut-step">
+      <div style="font-size:1.2rem;flex-shrink:0;width:28px;text-align:center;">📊</div>
+      <div class="st"><strong>Indicadores</strong> — Quatro indicadores acompanham seu desempenho: <em>Acurácia Observacional</em>, <em>Fundamentação Biológica</em>, <em>Segurança do Cliente</em> e <em>Conduta Profissional</em>. Eles sobem ou descem conforme a qualidade das suas respostas. Se Segurança ou Conduta caírem a níveis críticos, o atendimento é encerrado.</div>
+    </div>
+
+    <div class="tut-step">
+      <div style="font-size:1.2rem;flex-shrink:0;width:28px;text-align:center;">✍️</div>
+      <div class="st"><strong>Suas respostas</strong> — Cada resposta precisa ter no mínimo <strong>50 palavras</strong>. A IA avalia o que você escreveu — respostas vagas, superficiais ou genéricas geram consequências negativas. Use os conceitos do módulo para fundamentar.</div>
+    </div>
+
+    <div class="tut-step">
+      <div style="font-size:1.2rem;flex-shrink:0;width:28px;text-align:center;">💬</div>
+      <div class="st"><strong>Narrativa interativa</strong> — Após cada resposta, a IA narra o que acontece no consultório: novas informações, reações do cliente, achados clínicos. Leia com atenção — cada detalhe pode ser relevante para sua próxima decisão.</div>
+    </div>
+
+    <div class="tut-step">
+      <div style="font-size:1.2rem;flex-shrink:0;width:28px;text-align:center;">🩺</div>
+      <div class="st"><strong>Parecer consultivo</strong> — A qualquer momento, você pode solicitar parecer de uma dermatologista ou de um pesquisador em tricologia. O parecer aparece em um painel lateral. Use quando tiver dúvida real — mas a decisão é sempre sua.</div>
+    </div>
+
+    <div class="tut-step">
+      <div style="font-size:1.2rem;flex-shrink:0;width:28px;text-align:center;">📋</div>
+      <div class="st"><strong>Ao final</strong> — Você recebe um diagnóstico detalhado com seus indicadores finais, pontos fortes, temas para revisão e um relatório completo que pode ser baixado em HTML.</div>
+    </div>
+
+  </div>
+
+  <div class="tut-note" style="background:var(--accent-red-light);border-left-color:var(--accent-red);">
+    🚫 <strong>Linguagem inadequada</strong> — Xingamentos, linguagem de ódio ou ofensas resultam em encerramento imediato da simulação. Erros conceituais NÃO são penalizados como conduta inadequada — fazem parte do aprendizado.
+  </div>
+
+  <div class="tut-note">
+    🔒 Você pode jogar <strong>1 vez por dia</strong>. Se fechar a aba, pode retomar de onde parou. Ao final, use o tempo para revisar os temas indicados.
+  </div>
+
+  <div style="text-align:center;margin-top:24px;">
     <button class="btn btn-primary btn-lg" onclick="showLevel()">Entendido — escolher nível</button>
   </div>
 </div>
@@ -701,7 +759,8 @@ function resumeSess(){
 function newSess(){localStorage.removeItem(SIM_ID+'_gs');hide('ovRes');show('ovTut');}
 
 // Level
-function showLevel(){hide('ovTut');show('ovLvl');}
+function showTut2(){hide('ovTut');show('ovTut2');}
+function showLevel(){hide('ovTut');hide('ovTut2');show('ovLvl');}
 let selLvl=null;
 function selLevel(l,el){selLvl=l;document.querySelectorAll('.level-card').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');$('btnStart').disabled=false;}
 
