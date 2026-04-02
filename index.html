@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raiz — Simulador de Triagem Tricológica</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #FAF6F1;
+  --bg-secondary: #F0EBE3;
+  --bg-card: #FFFFFF;
+  --bg-card-alt: #F7F4EF;
+  --text-primary: #2C2416;
+  --text-secondary: #6B5D4F;
+  --text-muted: #9C8E7E;
+  --border: #E0D6C8;
+  --border-light: #EDE7DD;
+  --accent-green: #3A7D5C;
+  --accent-green-light: #E8F2EC;
+  --accent-green-dark: #2D6148;
+  --accent-amber: #C4862B;
+  --accent-amber-light: #FEF4E4;
+  --accent-red: #C0392B;
+  --accent-red-light: #FDECEA;
+  --accent-blue: #2E6B8A;
+  --accent-blue-light: #E8F1F5;
+  --phase-observe: #2E6B8A;
+  --phase-reason: #7B5EA7;
+  --phase-decide: #3A7D5C;
+  --shadow-sm: 0 1px 3px rgba(44,36,22,0.06);
+  --shadow-md: 0 4px 12px rgba(44,36,22,0.08);
+  --shadow-lg: 0 8px 30px rgba(44,36,22,0.12);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --font-display: 'DM Serif Display', Georgia, serif;
+  --font-body: 'DM Sans', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+[data-theme="dark"] {
+  --bg-primary: #1A1612;
+  --bg-secondary: #231F1A;
+  --bg-card: #2A2520;
+  --bg-card-alt: #322C26;
+  --text-primary: #F0EBE3;
+  --text-secondary: #B8A999;
+  --text-muted: #7E7167;
+  --border: #3D362E;
+  --border-light: #332D26;
+  --accent-green: #5AAF82;
+  --accent-green-light: #1E2E25;
+  --accent-green-dark: #7BC9A0;
+  --accent-amber: #E0A33E;
+  --accent-amber-light: #2E2618;
+  --accent-red: #E05A4E;
+  --accent-red-light: #2E1C1A;
+  --accent-blue: #5A9BBF;
+  --accent-blue-light: #1A2830;
+  --phase-observe: #5A9BBF;
+  --phase-reason: #A085C8;
+  --phase-decide: #5AAF82;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.25);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.3);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { font-size:16px; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.6;
+  transition: background 0.3s, color 0.3s;
+}
+.hidden { display:none !important; }
+
+/* Theme toggle */
+#themeToggle {
+  position:fixed; top:16px; right:16px; z-index:1000;
+  width:40px; height:40px; border-radius:50%;
+  background:var(--bg-card); border:1px solid var(--border);
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  box-shadow:var(--shadow-sm); transition:all 0.2s; font-size:18px;
+}
+#themeToggle:hover { box-shadow:var(--shadow-md); transform:scale(1.05); }
+
+/* Overlay base */
+.overlay {
+  position:fixed; inset:0; z-index:900;
+  background:rgba(44,36,22,0.55); backdrop-filter:blur(8px);
+  display:flex; align-items:center; justify-content:center; padding:20px;
+  animation:fadeIn 0.4s ease;
+}
+[data-theme="dark"] .overlay { background:rgba(0,0,0,0.65); }
+.overlay-content {
+  background:var(--bg-card); border-radius:var(--radius-xl);
+  max-width:640px; width:100%; max-height:90vh; overflow-y:auto;
+  box-shadow:var(--shadow-lg); animation:slideUp 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+@keyframes slideUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+/* Tutorial */
+.tut-inner { padding:40px; }
+.brand-mark { display:flex; align-items:center; gap:12px; margin-bottom:28px; }
+.brand-icon {
+  width:52px; height:52px; border-radius:var(--radius-md);
+  background:linear-gradient(135deg, var(--accent-green), var(--accent-green-dark));
+  display:flex; align-items:center; justify-content:center;
+  font-size:26px; color:white;
+}
+.brand-mark h1 { font-family:var(--font-display); font-size:2.2rem; font-weight:400; line-height:1.1; }
+.brand-mark .sub { font-size:0.85rem; color:var(--text-muted); margin-top:2px; }
+.tut-steps { display:flex; flex-direction:column; gap:14px; margin:24px 0; }
+.tut-step {
+  display:flex; gap:14px; align-items:flex-start;
+  padding:16px; border-radius:var(--radius-md);
+  background:var(--bg-card-alt); border:1px solid var(--border-light);
+}
+.sn { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.8rem; flex-shrink:0; color:white; }
+.sn.s1 { background:var(--phase-observe); }
+.sn.s2 { background:var(--phase-reason); }
+.sn.s3 { background:var(--phase-decide); }
+.st { font-size:0.9rem; color:var(--text-secondary); line-height:1.5; }
+.st strong { color:var(--text-primary); font-weight:600; }
+.tut-note {
+  padding:14px 16px; border-radius:var(--radius-md);
+  background:var(--accent-amber-light); border-left:3px solid var(--accent-amber);
+  font-size:0.85rem; color:var(--text-secondary); margin:20px 0;
+}
+
+/* Buttons */
+.btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding:12px 24px; border-radius:var(--radius-md);
+  font-family:var(--font-body); font-size:0.95rem; font-weight:600;
+  cursor:pointer; border:none; transition:all 0.2s;
+}
+.btn-primary { background:var(--accent-green); color:white; }
+.btn-primary:hover { background:var(--accent-green-dark); transform:translateY(-1px); box-shadow:var(--shadow-md); }
+.btn-secondary { background:var(--bg-card-alt); color:var(--text-primary); border:1px solid var(--border); }
+.btn-secondary:hover { background:var(--bg-secondary); }
+.btn-lg { padding:14px 32px; font-size:1rem; border-radius:var(--radius-lg); }
+.btn:disabled { opacity:0.5; cursor:not-allowed; transform:none !important; }
+
+/* Level select */
+.level-grid { display:grid; gap:12px; margin:24px 0; }
+.level-card {
+  padding:20px; border-radius:var(--radius-lg);
+  border:2px solid var(--border); background:var(--bg-card);
+  cursor:pointer; transition:all 0.2s; text-align:left;
+}
+.level-card:hover { border-color:var(--accent-green); box-shadow:var(--shadow-md); }
+.level-card.selected { border-color:var(--accent-green); background:var(--accent-green-light); }
+.level-card h3 { font-family:var(--font-display); font-size:1.15rem; margin-bottom:4px; }
+.level-card p { font-size:0.85rem; color:var(--text-muted); }
+.level-card .lm { font-family:var(--font-mono); font-size:0.75rem; color:var(--accent-green); margin-top:8px; }
+
+/* Game layout */
+.game-wrap { max-width:1100px; margin:0 auto; padding:20px; min-height:100vh; }
+.topbar {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:12px 0; margin-bottom:20px; border-bottom:1px solid var(--border-light);
+}
+.topbar-title { font-family:var(--font-display); font-size:1.3rem; }
+.topbar-meta { display:flex; align-items:center; gap:14px; font-size:0.8rem; color:var(--text-muted); }
+.phase-badge {
+  padding:4px 12px; border-radius:20px; font-weight:600; font-size:0.72rem;
+  text-transform:uppercase; letter-spacing:0.5px;
+}
+.phase-badge.ob { background:var(--accent-blue-light); color:var(--phase-observe); }
+.phase-badge.re { background:#F0E8F5; color:var(--phase-reason); }
+[data-theme="dark"] .phase-badge.re { background:#2A2232; }
+.phase-badge.de { background:var(--accent-green-light); color:var(--phase-decide); }
+
+/* Gauges */
+.gauges { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
+.g-item {
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+  padding:14px 8px; border-radius:var(--radius-lg);
+  background:var(--bg-card); border:1px solid var(--border-light); box-shadow:var(--shadow-sm);
+}
+.g-circ { position:relative; width:64px; height:64px; }
+.g-circ svg { transform:rotate(-90deg); }
+.g-circ .gbg { fill:none; stroke:var(--border-light); stroke-width:5; }
+.g-circ .gfill { fill:none; stroke-width:5; stroke-linecap:round; transition:stroke-dashoffset 0.8s ease; }
+.g-circ .gval {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-mono); font-size:0.95rem; font-weight:600;
+}
+.g-lbl { font-size:0.68rem; color:var(--text-muted); text-align:center; font-weight:500; text-transform:uppercase; letter-spacing:0.3px; line-height:1.3; }
+
+/* Patient file */
+.pf {
+  background:var(--bg-card); border:1px solid var(--border);
+  border-radius:var(--radius-xl); overflow:hidden;
+  box-shadow:var(--shadow-md); margin-bottom:20px;
+}
+.pf-head {
+  display:flex; align-items:center; gap:16px;
+  padding:20px 24px; border-bottom:1px solid var(--border-light);
+  background:var(--bg-card-alt);
+}
+.pf-avatar {
+  width:56px; height:56px; border-radius:50%;
+  background:var(--border); display:flex; align-items:center; justify-content:center;
+  font-size:24px; flex-shrink:0;
+}
+.pf-info h2 { font-family:var(--font-display); font-size:1.1rem; font-weight:400; }
+.pf-info .pf-queixa { font-size:0.85rem; color:var(--text-secondary); margin-top:2px; font-style:italic; }
+.pf-body { padding:24px; }
+
+/* Phase tabs */
+.ptabs { display:flex; gap:0; margin-bottom:20px; border-bottom:2px solid var(--border-light); }
+.ptab {
+  padding:10px 20px; font-size:0.78rem; font-weight:600;
+  text-transform:uppercase; letter-spacing:0.5px;
+  color:var(--text-muted); cursor:default;
+  border-bottom:2px solid transparent; margin-bottom:-2px; transition:all 0.2s;
+}
+.ptab.act { border-bottom-color:var(--phase-observe); color:var(--text-primary); }
+.ptab.act.re-act { border-bottom-color:var(--phase-reason); }
+.ptab.act.de-act { border-bottom-color:var(--phase-decide); }
+.ptab.done { color:var(--accent-green); }
+.ptab.done::after { content:" ✓"; font-size:0.65rem; }
+
+/* Narrative */
+.narr {
+  padding:20px; border-radius:var(--radius-lg);
+  background:var(--bg-card-alt); border:1px solid var(--border-light);
+  font-size:0.92rem; line-height:1.7; color:var(--text-secondary);
+  white-space:pre-wrap; margin-bottom:20px;
+}
+.narr .slbl {
+  font-family:var(--font-mono); font-size:0.68rem;
+  color:var(--text-muted); text-transform:uppercase;
+  letter-spacing:1px; margin-bottom:10px; display:block;
+}
+
+/* Investigation selector */
+.inv-sel { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:16px; }
+.inv-opt {
+  padding:10px 14px; border-radius:var(--radius-md);
+  border:1px solid var(--border); background:var(--bg-card);
+  cursor:pointer; transition:all 0.2s; font-size:0.82rem; font-weight:500;
+  display:flex; align-items:center; gap:8px;
+}
+.inv-opt:hover { border-color:var(--phase-observe); background:var(--accent-blue-light); }
+.inv-opt.sel { border-color:var(--phase-observe); background:var(--accent-blue-light); color:var(--phase-observe); font-weight:600; }
+.inv-opt .ii { font-size:1.1rem; }
+
+/* Form */
+.rform { margin-top:16px; }
+.rform label {
+  display:block; font-size:0.78rem; font-weight:600;
+  color:var(--text-muted); text-transform:uppercase;
+  letter-spacing:0.5px; margin-bottom:8px;
+}
+.rform textarea {
+  width:100%; min-height:120px; padding:14px 16px;
+  border-radius:var(--radius-md); border:1px solid var(--border);
+  background:var(--bg-card); color:var(--text-primary);
+  font-family:var(--font-body); font-size:0.92rem; line-height:1.6;
+  resize:vertical; transition:border-color 0.2s;
+}
+.rform textarea:focus { outline:none; border-color:var(--accent-green); }
+.rform textarea::placeholder { color:var(--text-muted); }
+.wc { display:flex; justify-content:space-between; margin-top:8px; font-size:0.75rem; color:var(--text-muted); }
+.wc.ins { color:var(--accent-red); }
+.wc.suf { color:var(--accent-green); }
+
+/* Framework/decision selects */
+.fsel select {
+  width:100%; padding:10px 14px; border-radius:var(--radius-md);
+  border:1px solid var(--border); background:var(--bg-card);
+  color:var(--text-primary); font-family:var(--font-body); font-size:0.9rem; cursor:pointer;
+}
+.fsel select:focus { outline:none; border-color:var(--accent-green); }
+
+/* Action row */
+.arow { display:flex; gap:10px; justify-content:flex-end; align-items:center; margin-top:16px; flex-wrap:wrap; }
+.btn-con {
+  background:var(--bg-card); border:1px solid var(--border);
+  color:var(--text-secondary); padding:8px 14px;
+  border-radius:var(--radius-md); font-size:0.8rem;
+  cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:6px;
+  font-family:var(--font-body); font-weight:500;
+}
+.btn-con:hover { border-color:var(--accent-green); color:var(--accent-green); }
+
+/* Loading */
+.ldg {
+  display:flex; align-items:center; gap:10px;
+  padding:16px 20px; border-radius:var(--radius-md);
+  background:var(--bg-card-alt); border:1px solid var(--border-light); margin:16px 0;
+}
+.ldots { display:flex; gap:4px; }
+.ldots span { width:6px; height:6px; border-radius:50%; background:var(--accent-green); animation:pulse 1.2s infinite; }
+.ldots span:nth-child(2) { animation-delay:0.2s; }
+.ldots span:nth-child(3) { animation-delay:0.4s; }
+.ltxt { font-size:0.85rem; color:var(--text-muted); }
+
+/* Consultant panel */
+.cpanel {
+  position:fixed; top:0; right:0; bottom:0; width:380px; max-width:90vw;
+  background:var(--bg-card); border-left:1px solid var(--border);
+  box-shadow:var(--shadow-lg); z-index:800;
+  transform:translateX(100%); transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);
+  display:flex; flex-direction:column;
+}
+.cpanel.open { transform:translateX(0); }
+.cp-head {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:20px; border-bottom:1px solid var(--border-light);
+}
+.cp-head h3 { font-family:var(--font-display); font-size:1.1rem; }
+.cp-close {
+  width:32px; height:32px; border-radius:50%;
+  background:var(--bg-card-alt); border:1px solid var(--border);
+  cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px;
+}
+.cp-body { padding:20px; flex:1; overflow-y:auto; }
+.cp-cards { display:flex; flex-direction:column; gap:12px; }
+.cp-card {
+  padding:16px; border-radius:var(--radius-md);
+  border:1px solid var(--border); cursor:pointer; transition:all 0.2s;
+}
+.cp-card:hover { border-color:var(--accent-green); box-shadow:var(--shadow-sm); }
+.cp-card .cn { font-weight:600; font-size:0.9rem; }
+.cp-card .cr { font-size:0.78rem; color:var(--text-muted); }
+.cp-card .cd { font-size:0.82rem; color:var(--text-secondary); margin-top:8px; line-height:1.5; }
+.cp-resp {
+  padding:16px; border-radius:var(--radius-md);
+  background:var(--bg-card-alt); border:1px solid var(--border-light);
+  font-size:0.88rem; line-height:1.6; color:var(--text-secondary);
+  margin-top:12px; white-space:pre-wrap;
+}
+.cp-resp .crl {
+  font-family:var(--font-mono); font-size:0.68rem;
+  color:var(--accent-green); text-transform:uppercase;
+  letter-spacing:0.5px; margin-bottom:8px; display:block;
+}
+
+/* Diagnosis overlay */
+.diag-ov .overlay-content { max-width:700px; padding:0; }
+.dh { padding:32px 32px 0; }
+.dh .vi { font-size:48px; margin-bottom:12px; }
+.dh h2 { font-family:var(--font-display); font-size:1.5rem; margin-bottom:4px; }
+.dh .vl { font-size:0.88rem; color:var(--text-secondary); line-height:1.6; white-space:pre-wrap; }
+.db { padding:24px 32px 32px; }
+.ds { margin-bottom:20px; }
+.ds h4 { font-size:0.73rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); margin-bottom:10px; }
+.dg-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+.dg-item {
+  display:flex; align-items:center; gap:12px;
+  padding:12px; border-radius:var(--radius-md);
+  background:var(--bg-card-alt); border:1px solid var(--border-light);
+}
+.dg-bar { flex:1; height:6px; border-radius:3px; background:var(--border-light); overflow:hidden; }
+.dg-fill { height:100%; border-radius:3px; transition:width 0.8s ease; }
+.dg-lbl { font-size:0.73rem; color:var(--text-muted); min-width:80px; }
+.dg-val { font-family:var(--font-mono); font-size:0.85rem; font-weight:600; min-width:30px; text-align:right; }
+.mlist { display:flex; flex-direction:column; gap:6px; }
+.mtag {
+  padding:8px 12px; border-radius:var(--radius-sm);
+  font-size:0.82rem; background:var(--accent-amber-light); color:var(--accent-amber);
+}
+.mtag.str { background:var(--accent-green-light); color:var(--accent-green); }
+.dacts { display:flex; gap:10px; margin-top:24px; flex-wrap:wrap; }
+
+/* Block/resume overlays */
+.blk-inner, .res-inner { padding:36px; text-align:center; }
+.blk-inner h2, .res-inner h2 { font-family:var(--font-display); font-size:1.3rem; margin:12px 0; }
+.blk-inner p, .res-inner p { color:var(--text-secondary); font-size:0.9rem; }
+.res-acts { display:flex; gap:10px; justify-content:center; margin-top:24px; }
+
+/* Report */
+.rpt-wrap { max-width:800px; margin:0 auto; padding:40px 20px; }
+.rpt-head { text-align:center; margin-bottom:32px; border-bottom:2px solid var(--border); padding-bottom:24px; }
+.rpt-head h1 { font-family:var(--font-display); font-size:1.8rem; }
+.rpt-head p { color:var(--text-muted); font-size:0.9rem; margin-top:4px; }
+.rpt-sec { margin-bottom:28px; }
+.rpt-sec h3 { font-size:0.83rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); margin-bottom:12px; }
+.rpt-turn {
+  padding:16px; border-radius:var(--radius-md);
+  background:var(--bg-card-alt); border:1px solid var(--border-light); margin-bottom:10px;
+}
+.rpt-lbl { font-family:var(--font-mono); font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; }
+.rpt-txt { font-size:0.88rem; color:var(--text-secondary); margin-top:6px; line-height:1.6; white-space:pre-wrap; }
+
+/* Responsive */
+@media(max-width:768px) {
+  .gauges { grid-template-columns:repeat(2,1fr); }
+  .inv-sel { grid-template-columns:1fr; }
+  .dg-grid { grid-template-columns:1fr; }
+  .tut-inner { padding:24px; }
+  .pf-head { flex-direction:column; text-align:center; }
+  .topbar { flex-direction:column; gap:8px; align-items:flex-start; }
+  .cpanel { width:100%; }
+}
+@media(max-width:480px) {
+  .gauges { gap:8px; }
+  .g-circ { width:52px; height:52px; }
+  .g-lbl { font-size:0.58rem; }
+  .arow { flex-direction:column; }
+  .arow .btn, .arow .btn-con { width:100%; justify-content:center; }
+}
+@media print {
+  body { background:white; color:black; }
+  #themeToggle,.btn,.arow { display:none !important; }
+}
+</style>
+</head>
+<body>
+
+<button id="themeToggle" onclick="toggleTheme()" title="Alternar tema">🌙</button>
+
+<!-- TUTORIAL -->
+<div id="ovTut" class="overlay">
+<div class="overlay-content">
+<div class="tut-inner">
+  <div class="brand-mark">
+    <div class="brand-icon">🌱</div>
+    <div>
+      <h1>Raiz</h1>
+      <div class="sub">Simulador de Triagem Tricológica</div>
+    </div>
+  </div>
+  <p style="color:var(--text-secondary);font-size:0.92rem;margin-bottom:8px;">
+    Você é <strong>tricologista clínico(a)</strong> em um centro de estética capilar avançada. Clientes chegam com queixas capilares reais. Sua missão: observar, raciocinar biologicamente e decidir com segurança.
+  </p>
+  <div class="tut-steps">
+    <div class="tut-step">
+      <div class="sn s1">1</div>
+      <div class="st"><strong>Observe</strong> — Investigue a queixa. Escolha o que examinar: anamnese, observação visual, avaliação da haste ou histórico de exposições. Cada escolha revela informações novas.</div>
+    </div>
+    <div class="tut-step">
+      <div class="sn s2">2</div>
+      <div class="st"><strong>Raciocine</strong> — Articule o que observou usando conceitos do módulo: anatomia folicular, ciclo capilar, microambiente, biologia molecular. Classifique: cosmético, funcional ou patológico?</div>
+    </div>
+    <div class="tut-step">
+      <div class="sn s3">3</div>
+      <div class="st"><strong>Decida</strong> — Protocolo estético no consultório, encaminhamento ao dermatologista, ou ambos? Justifique com base nos sinais e nos limites da atuação profissional.</div>
+    </div>
+  </div>
+  <div class="tut-note">
+    ⚠️ Você pode solicitar <strong>parecer consultivo</strong> de especialistas a qualquer momento — mas a decisão final é sua. Não pedir parecer quando deveria pode afetar a segurança do cliente.
+  </div>
+  <div style="text-align:center;margin-top:28px;">
+    <button class="btn btn-primary btn-lg" onclick="showLevel()">Entendido — escolher nível</button>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- LEVEL SELECT -->
+<div id="ovLvl" class="overlay hidden">
+<div class="overlay-content">
+<div class="tut-inner">
+  <h1 style="font-family:var(--font-display);font-size:1.5rem;margin-bottom:8px;">Escolha seu nível</h1>
+  <p style="color:var(--text-secondary);font-size:0.88rem;margin-bottom:20px;">A complexidade do caso e a exigência da avaliação aumentam com o nível.</p>
+  <div class="level-grid">
+    <div class="level-card" onclick="selLevel('junior',this)">
+      <h3>Júnior</h3>
+      <p>Caso introdutório. Queixa mais direta, sinais de alarme evidentes se presentes.</p>
+      <div class="lm">4 turnos · Observação → Raciocínio → Decisão</div>
+    </div>
+    <div class="level-card" onclick="selLevel('pleno',this)">
+      <h3>Pleno</h3>
+      <p>Caso moderado. Queixa ambígua, múltiplos fatores a considerar, trade-offs reais.</p>
+      <div class="lm">6 turnos · Observação aprofundada → Raciocínio → Decisão</div>
+    </div>
+    <div class="level-card" onclick="selLevel('senior',this)">
+      <h3>Sênior</h3>
+      <p>Caso complexo. Sobreposição de quadros, sinais sutis, risco de erro grave.</p>
+      <div class="lm">9 turnos · Investigação completa → Raciocínio avançado → Decisão fundamentada</div>
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:16px;">
+    <button id="btnStart" class="btn btn-primary btn-lg" onclick="startGame()" disabled>Iniciar atendimento</button>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- SESSION RESUME -->
+<div id="ovRes" class="overlay hidden">
+<div class="overlay-content">
+<div class="res-inner">
+  <div style="font-size:40px;">📋</div>
+  <h2>Sessão em andamento</h2>
+  <p>Você tem um atendimento incompleto. Deseja continuar de onde parou?</p>
+  <div class="res-acts">
+    <button class="btn btn-primary" onclick="resumeSess()">Continuar</button>
+    <button class="btn btn-secondary" onclick="newSess()">Começar do zero</button>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- DAILY BLOCK -->
+<div id="ovBlk" class="overlay hidden">
+<div class="overlay-content">
+<div class="blk-inner" id="blkContent"></div>
+</div>
+</div>
+
+<!-- MAIN GAME -->
+<div id="gameScr" class="game-wrap hidden">
+  <div class="topbar">
+    <div class="topbar-title">🌱 Raiz</div>
+    <div class="topbar-meta">
+      <span id="turnLbl">Turno 1/4</span>
+      <span id="phBadge" class="phase-badge ob">Observação</span>
+      <span id="lvlLbl" style="font-family:var(--font-mono)">Júnior</span>
+    </div>
+  </div>
+
+  <div class="gauges" id="gaugesRow"></div>
+
+  <div class="pf">
+    <div class="pf-head">
+      <div class="pf-avatar" id="pfAvatar">👤</div>
+      <div class="pf-info">
+        <h2 id="pfName">Carregando...</h2>
+        <div class="pf-queixa" id="pfQueixa"></div>
+      </div>
+    </div>
+    <div class="pf-body">
+      <div class="ptabs">
+        <div class="ptab act" id="tOb">Observação</div>
+        <div class="ptab" id="tRe">Raciocínio</div>
+        <div class="ptab" id="tDe">Conduta</div>
+      </div>
+
+      <div class="narr" id="narrBox">
+        <span class="slbl" id="sceneLbl">Recepção</span>
+        <span id="narrTxt"></span>
+      </div>
+
+      <!-- Phase: Observe -->
+      <div id="areaInv" class="hidden">
+        <label style="font-size:0.78rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;display:block;">Tipo de investigação</label>
+        <div class="inv-sel" id="invSel">
+          <div class="inv-opt" data-inv="anamnese" onclick="selInv(this)"><span class="ii">🗣️</span> Anamnese dirigida</div>
+          <div class="inv-opt" data-inv="visual" onclick="selInv(this)"><span class="ii">🔍</span> Observação visual</div>
+          <div class="inv-opt" data-inv="haste" onclick="selInv(this)"><span class="ii">💇</span> Avaliação da haste</div>
+          <div class="inv-opt" data-inv="historico" onclick="selInv(this)"><span class="ii">📋</span> Histórico de exposições</div>
+        </div>
+      </div>
+
+      <!-- Phase: Reason -->
+      <div id="areaFw" class="hidden">
+        <div class="fsel">
+          <label style="font-size:0.78rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:block;">Base teórica predominante</label>
+          <select id="fwSel">
+            <option value="">Selecione a base teórica...</option>
+            <option value="anatomia_folicular">Anatomia funcional da unidade pilossebácea</option>
+            <option value="ciclo_capilar">Ciclo capilar e fisiologia do crescimento</option>
+            <option value="biologia_molecular">Biologia molecular e células-tronco foliculares</option>
+            <option value="microambiente">Microambiente do couro cabeludo</option>
+            <option value="semiologia">Semiologia clínica e critérios de encaminhamento</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Phase: Decide -->
+      <div id="areaDec" class="hidden">
+        <div class="fsel">
+          <label style="font-size:0.78rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:block;">Conduta escolhida</label>
+          <select id="decSel">
+            <option value="">Selecione a conduta...</option>
+            <option value="protocolo_estetico">Protocolo estético no consultório</option>
+            <option value="encaminhamento">Encaminhamento ao dermatologista</option>
+            <option value="ambos">Protocolo estético + encaminhamento</option>
+            <option value="orientacao">Orientação e acompanhamento</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Response -->
+      <div class="rform">
+        <label id="rLbl">Descreva o que deseja investigar e por quê</label>
+        <textarea id="rTxt" placeholder="Escreva sua resposta com pelo menos 50 palavras..." rows="5"></textarea>
+        <div class="wc" id="wcDiv"><span id="wcTxt">0 palavras</span><span>mínimo 50</span></div>
+      </div>
+
+      <div class="arow">
+        <button class="btn-con" onclick="openCP()">🩺 Solicitar parecer</button>
+        <button id="btnSub" class="btn btn-primary" onclick="submitTurn()" disabled>Enviar →</button>
+      </div>
+
+      <div id="ldgArea" class="ldg hidden">
+        <div class="ldots"><span></span><span></span><span></span></div>
+        <span class="ltxt">Analisando sua resposta...</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONSULTANT PANEL -->
+<div id="cpPanel" class="cpanel">
+  <div class="cp-head">
+    <h3>Parecer consultivo</h3>
+    <button class="cp-close" onclick="closeCP()">✕</button>
+  </div>
+  <div class="cp-body">
+    <div class="cp-cards" id="cpCards">
+      <div class="cp-card" onclick="reqConsult('dermatologista')">
+        <div class="cn">Dra. Renata Almeida</div>
+        <div class="cr">Dermatologista · CRM/SP</div>
+        <div class="cd">Especialista em alopecias cicatriciais e não cicatriciais. Opina sobre sinais inflamatórios, necessidade de biópsia e urgência de encaminhamento.</div>
+      </div>
+      <div class="cp-card" onclick="reqConsult('pesquisador')">
+        <div class="cn">Prof. Marcos Vieira</div>
+        <div class="cr">Biólogo · Pesquisador em tricologia</div>
+        <div class="cd">Especialista em biologia do folículo piloso, ciclo capilar e vias moleculares. Ajuda a interpretar mecanismos biológicos dos sinais observados.</div>
+      </div>
+    </div>
+    <div id="cpResp" class="hidden"></div>
+  </div>
+</div>
+
+<!-- DIAGNOSIS -->
+<div id="ovDiag" class="overlay hidden diag-ov">
+<div class="overlay-content">
+  <div class="dh" id="diagHead"></div>
+  <div class="db" id="diagBody"></div>
+</div>
+</div>
+
+<!-- REPORT -->
+<div id="rptScr" class="hidden">
+<div class="rpt-wrap" id="rptWrap"></div>
+</div>
+
+<script>
+const SIM_ID='raiz_trico';
+const API_URL='https://weathered-snow-8bcbsimulador-proxy.lira-paulovitor.workers.dev';
+const MODEL='claude-haiku-4-5-20251001';
+const MAXTK=4096;
+
+const LVLS={
+  junior:{label:'Júnior',turns:4,phases:[2,1,1]},
+  pleno:{label:'Pleno',turns:6,phases:[2,2,2]},
+  senior:{label:'Sênior',turns:9,phases:[3,3,3]}
+};
+const IND=['Acurácia Observacional','Fundamentação Biológica','Segurança do Cliente','Conduta Profissional'];
+const ICOL=['var(--phase-observe)','var(--phase-reason)','var(--accent-amber)','var(--phase-decide)'];
+const FW={anatomia_folicular:'Anatomia funcional da unidade pilossebácea',ciclo_capilar:'Ciclo capilar e fisiologia do crescimento',biologia_molecular:'Biologia molecular e células-tronco foliculares',microambiente:'Microambiente do couro cabeludo',semiologia:'Semiologia clínica e critérios de encaminhamento'};
+const COND={protocolo_estetico:'Protocolo estético no consultório',encaminhamento:'Encaminhamento ao dermatologista',ambos:'Protocolo estético + encaminhamento',orientacao:'Orientação e acompanhamento'};
+const INVT={anamnese:'Anamnese dirigida',visual:'Observação visual do couro cabeludo',haste:'Avaliação da haste capilar',historico:'Histórico de exposições e procedimentos'};
+
+let G={level:null,turn:0,maxTurns:0,phases:[],ind:[65,65,70,65],hist:[],brief:null,phase:'observe',inv:null,fw:null,dec:null,consults:[],over:false,diag:null};
+
+// Theme
+function toggleTheme(){
+  const d=document.documentElement,dk=d.getAttribute('data-theme')==='dark';
+  d.setAttribute('data-theme',dk?'':'dark');
+  document.getElementById('themeToggle').textContent=dk?'🌙':'☀️';
+  localStorage.setItem(SIM_ID+'_theme',dk?'light':'dark');
+}
+(function(){const s=localStorage.getItem(SIM_ID+'_theme');if(s==='dark'){document.documentElement.setAttribute('data-theme','dark');document.getElementById('themeToggle').textContent='☀️';}})();
+
+// Helpers
+function show(id){document.getElementById(id).classList.remove('hidden');}
+function hide(id){document.getElementById(id).classList.add('hidden');}
+function $(id){return document.getElementById(id);}
+function countW(t){return t.trim().split(/\s+/).filter(w=>w.length>0).length;}
+
+// Daily block
+function checkBlock(){
+  const l=localStorage.getItem(SIM_ID+'_last');
+  if(!l)return false;
+  try{const d=JSON.parse(l);if(d.date===new Date().toDateString()){showBlock(d);return true;}}catch(e){}
+  return false;
+}
+function showBlock(d){
+  const vm={vitoria:['🏆','Excelente desempenho!','Triagem exemplar.'],parcial:['📋','Desempenho parcial','Há áreas para melhorar.'],derrota:['⚠️','Atenção necessária','Revise os fundamentos.']};
+  const v=vm[d.verdict]||vm.parcial;
+  $('blkContent').innerHTML=`<div style="font-size:48px">${v[0]}</div><h2>${v[1]}</h2><p>${v[2]}</p><p style="margin-top:16px;font-size:0.85rem;color:var(--text-muted)">Você já realizou um atendimento hoje.<br>Volte amanhã para um novo caso.</p>${d.modules?`<div style="margin-top:20px;text-align:left"><h4 style="font-size:0.73rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px">Temas para revisão</h4><div style="font-size:0.85rem;color:var(--text-secondary)">${d.modules}</div></div>`:''}`;
+  hide('ovTut');show('ovBlk');
+}
+
+// Session
+function checkSess(){
+  const s=localStorage.getItem(SIM_ID+'_gs');
+  if(!s)return false;
+  try{const d=JSON.parse(s);if(d.date!==new Date().toDateString()){localStorage.removeItem(SIM_ID+'_gs');return false;}hide('ovTut');show('ovRes');return true;}catch(e){localStorage.removeItem(SIM_ID+'_gs');return false;}
+}
+function saveSess(){localStorage.setItem(SIM_ID+'_gs',JSON.stringify({...G,date:new Date().toDateString()}));}
+function resumeSess(){
+  try{G=JSON.parse(localStorage.getItem(SIM_ID+'_gs'));hide('ovRes');show('gameScr');renderState();}catch(e){newSess();}
+}
+function newSess(){localStorage.removeItem(SIM_ID+'_gs');hide('ovRes');show('ovTut');}
+
+// Level
+function showLevel(){hide('ovTut');show('ovLvl');}
+let selLvl=null;
+function selLevel(l,el){selLvl=l;document.querySelectorAll('.level-card').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');$('btnStart').disabled=false;}
+
+// Phases
+function getPhase(t){const p=G.phases;if(t<=p[0])return'observe';if(t<=p[0]+p[1])return'reason';return'decide';}
+function phLabel(p){return{observe:'Observação',reason:'Raciocínio',decide:'Conduta'}[p];}
+
+function updatePhaseUI(){
+  const p=G.phase;
+  const b=$('phBadge');b.className='phase-badge';
+  b.classList.add(p==='observe'?'ob':p==='reason'?'re':'de');
+  b.textContent=phLabel(p);
+
+  const order=['observe','reason','decide'],ci=order.indexOf(p);
+  ['tOb','tRe','tDe'].forEach((id,i)=>{
+    const el=$(id);el.className='ptab';
+    if(i<ci)el.classList.add('done');
+    if(order[i]===p){el.classList.add('act');if(p==='reason')el.classList.add('re-act');if(p==='decide')el.classList.add('de-act');}
+  });
+
+  $('areaInv').classList.toggle('hidden',p!=='observe');
+  $('areaFw').classList.toggle('hidden',p!=='reason');
+  $('areaDec').classList.toggle('hidden',p!=='decide');
+
+  const lbls={observe:'Descreva o que deseja investigar e por quê',reason:'Articule seu raciocínio biológico com base nas observações',decide:'Justifique sua conduta com base nos achados e nos limites de atuação'};
+  $('rLbl').textContent=lbls[p];
+  const phs={observe:'Descreva em detalhe o que você quer investigar neste cliente e qual sua hipótese inicial...',reason:'Explique biologicamente o que os achados sugerem, usando os conceitos do módulo...',decide:'Descreva a conduta escolhida, os critérios que justificam essa decisão e os limites de atuação...'};
+  $('rTxt').placeholder=phs[p];
+}
+
+function updateTurn(){$('turnLbl').textContent=`Turno ${G.turn}/${G.maxTurns}`;$('lvlLbl').textContent=LVLS[G.level].label;}
+
+// Gauges
+function renderGauges(){
+  const circ=2*Math.PI*27;
+  $('gaugesRow').innerHTML=IND.map((n,i)=>{
+    const v=G.ind[i],off=circ-(v/100)*circ;
+    return`<div class="g-item"><div class="g-circ"><svg width="64" height="64" viewBox="0 0 64 64"><circle class="gbg" cx="32" cy="32" r="27"/><circle class="gfill" cx="32" cy="32" r="27" style="stroke:${ICOL[i]};stroke-dasharray:${circ};stroke-dashoffset:${off}"/></svg><div class="gval" style="color:${ICOL[i]}">${v}</div></div><div class="g-lbl">${n}</div></div>`;
+  }).join('');
+}
+
+function updGauges(deltas){
+  if(!deltas||deltas.length!==4)return;
+  G.ind=deltas.map((d,i)=>Math.max(0,Math.min(100,G.ind[i]+d)));
+  renderGauges();
+}
+
+// Investigation
+function selInv(el){
+  document.querySelectorAll('.inv-opt').forEach(o=>o.classList.remove('sel'));
+  el.classList.add('sel');G.inv=el.dataset.inv;valForm();
+}
+
+// Validation
+function valForm(){
+  const wc=countW($('rTxt').value),p=G.phase;
+  let ok=wc>=50;
+  if(p==='observe'&&!G.inv)ok=false;
+  if(p==='reason'&&!$('fwSel').value)ok=false;
+  if(p==='decide'&&!$('decSel').value)ok=false;
+  $('btnSub').disabled=!ok;
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  $('rTxt').addEventListener('input',()=>{
+    const wc=countW($('rTxt').value);
+    $('wcTxt').textContent=`${wc} palavras`;
+    $('wcDiv').className='wc '+(wc>=50?'suf':'ins');
+    valForm();
+  });
+  $('fwSel').addEventListener('change',()=>{G.fw=$('fwSel').value;valForm();});
+  $('decSel').addEventListener('change',()=>{G.dec=$('decSel').value;valForm();});
+});
+
+// Start
+async function startGame(){
+  if(!selLvl)return;
+  const lv=LVLS[selLvl];
+  G={level:selLvl,turn:1,maxTurns:lv.turns,phases:lv.phases,ind:[65,65,70,65],hist:[],brief:null,phase:'observe',inv:null,fw:null,dec:null,consults:[],over:false,diag:null};
+  hide('ovLvl');show('gameScr');
+  renderGauges();updatePhaseUI();updateTurn();
+  $('narrTxt').textContent='';$('sceneLbl').textContent='Preparando atendimento...';
+  setLdg(true);
+
+  try{
+    const r=await callAPI(buildBriefing(),[]);
+    const p=parseJ(r);
+    if(p){
+      G.brief=p;
+      $('pfName').textContent=p.nome_cliente||'Cliente';
+      $('pfQueixa').textContent=`"${p.queixa_principal||'...'}"`;
+      $('pfAvatar').textContent=p.genero==='F'?'👩':'👨';
+      $('sceneLbl').textContent='Turno 1 · Observação';
+      $('narrTxt').textContent=p.cena_inicial||'O cliente chegou ao consultório.';
+      show('areaInv');
+    }else{$('narrTxt').textContent='Erro ao gerar o caso. Recarregue a página.';}
+  }catch(e){console.error(e);$('narrTxt').textContent='Erro de conexão. Verifique e recarregue.';}
+  setLdg(false);saveSess();
+}
+
+// Submit
+async function submitTurn(){
+  if(G.over)return;
+  const txt=$('rTxt').value.trim(),ph=G.phase;
+  const td={turno:G.turn,fase:ph,resposta:txt};
+  if(ph==='observe')td.tipo_investigacao=G.inv;
+  else if(ph==='reason')td.base_teorica=$('fwSel').value;
+  else if(ph==='decide')td.conduta=$('decSel').value;
+  td.pareceres=G.consults.slice();
+
+  $('btnSub').disabled=true;$('rTxt').disabled=true;setLdg(true);
+
+  let retries=0,parsed=null;
+  while(retries<3&&!parsed){
+    try{
+      const msgs=buildTurnMsgs(td);
+      const r=await callAPI(null,msgs);
+      parsed=parseJ(r);
+    }catch(e){console.error('Attempt',retries,e);}
+    retries++;
+  }
+
+  if(parsed){
+    G.hist.push({...td,aval:parsed.avaliacao_curta||'',deltas:parsed.indicadores_delta||[0,0,0,0]});
+    updGauges(parsed.indicadores_delta);
+
+    if(parsed.conduta_inadequada){G.over=true;await endGame('derrota','Conduta inadequada detectada.');setLdg(false);return;}
+    if(G.ind[2]<=15||G.ind[3]<=15){G.over=true;await endGame('derrota',parsed.narrativa||'Indicadores críticos.');setLdg(false);return;}
+    if(G.turn>=G.maxTurns){G.over=true;await endGame(null,null);setLdg(false);return;}
+
+    G.turn++;G.phase=getPhase(G.turn);G.inv=null;G.consults=[];
+    updateTurn();updatePhaseUI();renderGauges();
+    $('sceneLbl').textContent=`Turno ${G.turn} · ${phLabel(G.phase)}`;
+    $('narrTxt').textContent=parsed.narrativa||'';
+    if(G.phase==='observe'){show('areaInv');document.querySelectorAll('.inv-opt').forEach(o=>o.classList.remove('sel'));}
+    $('rTxt').value='';$('rTxt').disabled=false;$('wcTxt').textContent='0 palavras';$('wcDiv').className='wc';$('fwSel').value='';$('decSel').value='';
+    valForm();saveSess();
+  }else{
+    $('rTxt').disabled=false;$('narrTxt').textContent+='\n\n⚠️ Erro ao processar. Tente enviar novamente.';$('btnSub').disabled=false;
+  }
+  setLdg(false);
+}
+
+function setLdg(v){$('ldgArea').classList.toggle('hidden',!v);}
+
+// End game
+async function endGame(fv,fn){
+  setLdg(true);
+  let parsed=null;
+  try{
+    const msgs=buildDiagMsgs();
+    const r=await callAPI(null,msgs);
+    parsed=parseJ(r);
+  }catch(e){console.error(e);}
+
+  const diag=parsed||{avaliacao_geral:'Não foi possível gerar diagnóstico detalhado.',pontos_fortes:['Sessão concluída'],modulos_revisar:['Revisar todos os temas']};
+  G.diag=diag;
+  const verdict=fv||calcVerdict();
+  showDiag(verdict,diag);saveBlock(verdict,diag);
+  setLdg(false);localStorage.removeItem(SIM_ID+'_gs');
+}
+
+function calcVerdict(){const a=G.ind.reduce((s,v)=>s+v,0)/4;return a>=70?'vitoria':a>=45?'parcial':'derrota';}
+function saveBlock(v,d){localStorage.setItem(SIM_ID+'_last',JSON.stringify({date:new Date().toDateString(),verdict:v,modules:(d.modulos_revisar||[]).join(', '),indicators:[...G.ind]}));}
+
+function showDiag(verdict,diag){
+  const vm={vitoria:{i:'🏆',t:'Triagem exemplar',c:'var(--accent-green)'},parcial:{i:'📋',t:'Resultado parcial',c:'var(--accent-amber)'},derrota:{i:'⚠️',t:'Atenção crítica',c:'var(--accent-red)'}};
+  const v=vm[verdict]||vm.parcial;
+  $('diagHead').innerHTML=`<div class="vi">${v.i}</div><h2 style="color:${v.c}">${v.t}</h2><div class="vl">${diag.avaliacao_geral||''}</div>`;
+
+  let h='';
+  h+=`<div class="ds"><h4>Indicadores finais</h4><div class="dg-grid">`;
+  IND.forEach((n,i)=>{const val=G.ind[i],col=val>=70?'var(--accent-green)':val>=45?'var(--accent-amber)':'var(--accent-red)';
+    h+=`<div class="dg-item"><div class="dg-lbl">${n}</div><div class="dg-bar"><div class="dg-fill" style="width:${val}%;background:${col}"></div></div><div class="dg-val" style="color:${col}">${val}</div></div>`;
+  });h+=`</div></div>`;
+
+  if(diag.pontos_fortes&&diag.pontos_fortes.length){h+=`<div class="ds"><h4>Pontos fortes</h4><div class="mlist">`;diag.pontos_fortes.forEach(p=>{h+=`<div class="mtag str">✓ ${p}</div>`;});h+=`</div></div>`;}
+  if(diag.modulos_revisar&&diag.modulos_revisar.length){h+=`<div class="ds"><h4>Temas para revisão</h4><div class="mlist">`;diag.modulos_revisar.forEach(m=>{h+=`<div class="mtag">↻ ${m}</div>`;});h+=`</div></div>`;}
+  h+=`<div class="dacts"><button class="btn btn-primary" onclick="showRpt()">Ver relatório completo</button><button class="btn btn-secondary" onclick="dlRpt()">Baixar relatório</button></div>`;
+  $('diagBody').innerHTML=h;
+  hide('gameScr');show('ovDiag');
+}
+
+// Report
+function showRpt(){hide('ovDiag');show('rptScr');renderRpt();}
+function renderRpt(){
+  const d=G.diag||{},lv=LVLS[G.level];
+  let h=`<div class="rpt-head"><h1>🌱 Raiz — Relatório de Atendimento</h1><p>${lv.label} · ${G.maxTurns} turnos · ${new Date().toLocaleDateString('pt-BR')}</p></div>`;
+  h+=`<div class="rpt-sec"><h3>Caso clínico</h3><div class="rpt-turn"><div class="rpt-lbl">Cliente</div><div class="rpt-txt">${G.brief?`${G.brief.nome_cliente} — "${G.brief.queixa_principal}"`:'N/A'}</div></div></div>`;
+  h+=`<div class="rpt-sec"><h3>Indicadores finais</h3>${IND.map((n,i)=>`<div class="rpt-turn" style="display:flex;justify-content:space-between;align-items:center"><span class="rpt-lbl">${n}</span><span style="font-family:var(--font-mono);font-weight:600">${G.ind[i]}/100</span></div>`).join('')}</div>`;
+  h+=`<div class="rpt-sec"><h3>Histórico de turnos</h3>${G.hist.map(t=>`<div class="rpt-turn"><div class="rpt-lbl">Turno ${t.turno} · ${phLabel(t.fase)}${t.tipo_investigacao?' · '+INVT[t.tipo_investigacao]:''}${t.base_teorica?' · '+FW[t.base_teorica]:''}${t.conduta?' · '+COND[t.conduta]:''}</div><div class="rpt-txt">${t.resposta}</div>${t.aval?`<div class="rpt-txt" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-light);color:var(--text-muted);font-size:0.82rem">📝 ${t.aval}</div>`:''}</div>`).join('')}</div>`;
+  h+=`<div class="rpt-sec"><h3>Avaliação final</h3><div class="rpt-turn"><div class="rpt-txt">${d.avaliacao_geral||'N/A'}</div></div></div>`;
+  if(d.pontos_fortes)h+=`<div class="rpt-sec"><h3>Pontos fortes</h3>${d.pontos_fortes.map(p=>`<div class="rpt-turn"><div class="rpt-txt">✓ ${p}</div></div>`).join('')}</div>`;
+  if(d.modulos_revisar)h+=`<div class="rpt-sec"><h3>Temas para revisão</h3>${d.modulos_revisar.map(m=>`<div class="rpt-turn"><div class="rpt-txt">↻ ${m}</div></div>`).join('')}</div>`;
+  h+=`<div style="text-align:center;margin-top:32px"><button class="btn btn-secondary" onclick="dlRpt()">📥 Baixar como HTML</button></div>`;
+  $('rptWrap').innerHTML=h;
+}
+function dlRpt(){
+  if(!$('rptWrap').innerHTML)renderRpt();
+  const c=$('rptWrap').innerHTML;
+  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Raiz — Relatório</title><style>body{font-family:Georgia,serif;max-width:800px;margin:0 auto;padding:40px 20px;color:#2C2416;line-height:1.6}h1{font-size:1.8rem;text-align:center}h3{font-size:.85rem;text-transform:uppercase;letter-spacing:.5px;color:#6B5D4F;margin:24px 0 10px}.rpt-turn{padding:14px;border:1px solid #E0D6C8;border-radius:8px;margin-bottom:8px;background:#F7F4EF}.rpt-lbl{font-size:.7rem;color:#9C8E7E;text-transform:uppercase}.rpt-txt{font-size:.9rem;margin-top:4px;white-space:pre-wrap}</style></head><body>${c}</body></html>`;
+  const b=new Blob([html],{type:'text/html'}),u=URL.createObjectURL(b),a=document.createElement('a');
+  a.href=u;a.download=`raiz_relatorio_${new Date().toISOString().slice(0,10)}.html`;a.click();URL.revokeObjectURL(u);
+}
+
+// Consultant
+function openCP(){$('cpPanel').classList.add('open');$('cpCards').classList.remove('hidden');$('cpResp').classList.add('hidden');}
+function closeCP(){$('cpPanel').classList.remove('open');}
+async function reqConsult(type){
+  const nm=type==='dermatologista'?'Dra. Renata Almeida':'Prof. Marcos Vieira';
+  G.consults.push(type);
+  $('cpCards').classList.add('hidden');$('cpResp').classList.remove('hidden');
+  $('cpResp').innerHTML=`<div class="cp-resp"><div class="crl">Solicitando parecer de ${nm}...</div><div class="ldots" style="margin-top:8px"><span></span><span></span><span></span></div></div>`;
+  try{
+    const msgs=buildConsultMsgs(type);
+    const r=await callAPI(null,msgs);
+    const p=parseJ(r);
+    $('cpResp').innerHTML=`<div class="cp-resp"><div class="crl">Parecer — ${nm}</div>${p&&p.parecer?p.parecer:(r||'Não foi possível obter parecer.')}</div>`;
+  }catch(e){$('cpResp').innerHTML=`<div class="cp-resp"><div class="crl">Parecer — ${nm}</div>Erro de conexão. Tente novamente.</div>`;}
+  saveSess();
+}
+
+// Render state (resume)
+function renderState(){
+  renderGauges();updateTurn();updatePhaseUI();
+  if(G.brief){$('pfName').textContent=G.brief.nome_cliente||'Cliente';$('pfQueixa').textContent=`"${G.brief.queixa_principal||'...'}"`;$('pfAvatar').textContent=G.brief.genero==='F'?'👩':'👨';}
+  $('sceneLbl').textContent=`Turno ${G.turn} · ${phLabel(G.phase)}`;
+  $('narrTxt').textContent='Sessão restaurada. Continue seu atendimento.';
+  if(G.phase==='observe'){show('areaInv');document.querySelectorAll('.inv-opt').forEach(o=>o.classList.remove('sel'));}
+  $('rTxt').value='';$('rTxt').disabled=false;valForm();
+}
+
+// ============ SYSTEM PROMPT ============
+function gSys(){
+  return `Você é o motor narrativo e avaliador do simulador "Raiz" — triagem tricológica para pós-graduação em Tricologia Avançada e Terapia Capilar.
+
+CONTEXTO: O aluno é tricologista clínico em centro de estética capilar. Clientes chegam com queixas capilares. O aluno investiga, raciocina biologicamente e decide se cuida ou encaminha.
+
+CONTEÚDO DO MÓDULO 1 — os 5 temas que o aluno estudou:
+1. ANATOMIA DA UNIDADE PILOSSEBÁCEA: folículo (infundíbulo, ístmo, bulbo, papila dérmica), haste (medula, córtex, cutícula), bainhas radiculares, glândula sebácea, músculo eretor, região bulge, pelo terminal vs velos, dano da haste vs doença folicular.
+2. CICLO CAPILAR: anágena, catágena, telógena, exógena. Mosaico folicular. Eflúvio telógeno (queda difusa 2-4 meses pós-gatilho). Miniaturização (AGA). Encurtamento da anágena.
+3. BIOLOGIA MOLECULAR: células-tronco do bulge, papila dérmica como centro indutor, vias Wnt/β-catenina, Shh, BMP, Notch. Privilégio imune (quebra→alopecia areata). AGA como processo complexo (genética+androgênios+miniaturização+inflamação perifolicular).
+4. MICROAMBIENTE: barreira cutânea, sebo, microbioma (Malassezia, Staphylococcus, Cutibacterium). Dermatite seborreica. Disfunção de barreira. Hormônios. Práticas cosméticas agressivas.
+5. SEMIOLOGIA: cicatriciais vs não cicatriciais. AGA (rarefação, miniaturização, padrão regional). Alopecia areata (placas, autoimune, yellow dots, black dots, fios em exclamação). Eflúvio telógeno (difuso, pós-gatilho). SINAIS DE ALARME: eritema perifolicular, hiperqueratose, ardor/prurido persistente, dor, pele lisa/brilhante, perda de óstios. Líquen plano pilar. Alopecia frontal fibrosante. LIMITES da atuação não médica. Tricoscopia básica.
+
+MECÂNICA: Nível ${LVLS[G.level].label} (${G.maxTurns} turnos). Fases: Observação(${G.phases[0]}) → Raciocínio(${G.phases[1]}) → Conduta(${G.phases[2]}).
+Indicadores: ${IND.join(', ')} (0-100).
+
+REGRAS DE AVALIAÇÃO:
+- Resposta vaga/superficial → deltas negativos (-3 a -10). NUNCA complete resposta fraca.
+- Raciocínio biológico correto → deltas +3 a +8.
+- Integração excepcional de múltiplos conceitos → +5 a +12.
+- Banalizar sinais de alarme → Segurança do Cliente -8 a -15.
+- Medicalizar indevidamente (inventar diagnóstico fora do escopo) → Conduta Profissional -5 a -10.
+- Xingamentos/ódio → conduta_inadequada=true (game over). Erros conceituais NÃO são conduta inadequada.
+
+DELTAS: entre -15 e +12. PROIBIDO todos zero. Na Observação: Acurácia é mais sensível. No Raciocínio: Fundamentação é mais sensível. Na Conduta: Conduta Profissional e Segurança são mais sensíveis.
+
+DIFICULDADE PROGRESSIVA: turnos avançados devem apresentar nuances maiores. ${G.level==='senior'?'No Sênior: sobreposição de quadros, achados contraditórios, sinais sutis que exigem correlação cruzada.':G.level==='pleno'?'No Pleno: ambiguidades moderadas, trade-offs entre cosmético e patológico.':'No Júnior: sinais mais claros, mas o aluno precisa saber procurá-los.'}
+
+FORMATO (SEMPRE JSON válido, sem markdown, sem backticks):
+{"narrativa":"texto em 2ª pessoa do que acontece no consultório","avaliacao_curta":"1-2 frases sem números","indicadores_delta":[N1,N2,N3,N4],"conduta_inadequada":false}
+
+NUNCA verbalize valores numéricos dos deltas. A narrativa é imersiva, no consultório.`;
+}
+
+// Briefing prompt
+function buildBriefing(){
+  const cx={junior:'caso introdutório com queixa relativamente direta',pleno:'caso moderado com queixa ambígua e múltiplos fatores',senior:'caso complexo com sobreposição de quadros e sinais sutis'}[G.level];
+  return`Gere o briefing inicial de um caso clínico para triagem tricológica.
+Nível: ${LVLS[G.level].label} — ${cx}.
+O caso deve envolver queixa capilar realista baseada nos 5 temas do módulo, com trade-offs entre cosmético e patológico.
+${G.level==='senior'?'Inclua sobreposição de quadros (ex: eflúvio+dermatite+sinais potencialmente cicatriciais).':G.level==='pleno'?'Inclua ambiguidade que exija investigação cuidadosa.':'Sinais claros se o aluno souber procurá-los.'}
+
+Retorne APENAS JSON (sem markdown):
+{"nome_cliente":"nome brasileiro","genero":"M ou F","idade":número,"queixa_principal":"frase curta na linguagem do paciente","cena_inicial":"narrativa em 2ª pessoa de quando o cliente chega. Máx 4 parágrafos. Ambiental, emocional, observações iniciais visíveis.","caso_interno":"caso completo para uso interno: diagnóstico real, sinais esperados, achados por tipo de investigação, gravidade, se precisa encaminhamento"}`;
+}
+
+// Turn messages
+function buildTurnMsgs(td){
+  const m=[];
+  m.push({role:'user',content:gSys()});
+  m.push({role:'assistant',content:'Entendido. Avaliarei as respostas seguindo todas as regras.'});
+  if(G.brief){m.push({role:'user',content:`BRIEFING:\n${JSON.stringify(G.brief)}`});m.push({role:'assistant',content:'Caso carregado.'});}
+  if(G.hist.length>0){
+    const log=G.hist.map(h=>`T${h.turno}|${h.fase}|${h.tipo_investigacao||h.base_teorica||h.conduta||'-'}|"${h.resposta.substring(0,200)}"|Δ[${h.deltas.join(',')}]`).join('\n');
+    m.push({role:'user',content:`HISTÓRICO:\n${log}\nInd:[${G.ind.join(',')}]`});
+    m.push({role:'assistant',content:'Registrado.'});
+  }
+  let p=`TURNO ${td.turno}/${G.maxTurns} — Fase: ${td.fase.toUpperCase()}`;
+  if(td.tipo_investigacao)p+=`\nInvestigação: ${INVT[td.tipo_investigacao]}`;
+  if(td.base_teorica)p+=`\nBase teórica: ${FW[td.base_teorica]}`;
+  if(td.conduta)p+=`\nConduta: ${COND[td.conduta]}`;
+  if(td.pareceres.length)p+=`\nPareceres solicitados: ${td.pareceres.join(', ')}`;
+  p+=`\n\nRESPOSTA DO ALUNO:\n"${td.resposta}"\n\nAvalie e retorne JSON.`;
+  m.push({role:'user',content:p});
+  return m;
+}
+
+// Consult messages
+function buildConsultMsgs(type){
+  const m=[],nm=type==='dermatologista'?'Dra. Renata Almeida, dermatologista':'Prof. Marcos Vieira, biólogo/pesquisador em tricologia';
+  const foco=type==='dermatologista'?'sinais inflamatórios, cicatricial vs não cicatricial, biópsia, urgência':'mecanismos biológicos, ciclo capilar, vias moleculares, fisiológico vs patológico';
+  m.push({role:'user',content:gSys()});m.push({role:'assistant',content:'Ok.'});
+  if(G.brief){m.push({role:'user',content:`CASO:${JSON.stringify(G.brief)}`});m.push({role:'assistant',content:'Ok.'});}
+  if(G.hist.length>0){m.push({role:'user',content:`HIST:${G.hist.map(h=>`T${h.turno}|${h.fase}|"${h.resposta.substring(0,150)}"`).join('\n')}`});m.push({role:'assistant',content:'Ok.'});}
+  m.push({role:'user',content:`O aluno solicita parecer de ${nm}. Foco: ${foco}.
+O parecer deve: ser em 1ª pessoa, 3-5 parágrafos, oferecer perspectiva sem dar resposta direta, levantar hipóteses que o aluno deveria considerar, ser coerente com o caso.
+JSON: {"parecer":"texto"}`});
+  return m;
+}
+
+// Diagnosis messages
+function buildDiagMsgs(){
+  const m=[];
+  m.push({role:'user',content:gSys()});m.push({role:'assistant',content:'Ok.'});
+  if(G.brief){m.push({role:'user',content:`CASO:${JSON.stringify(G.brief)}`});m.push({role:'assistant',content:'Ok.'});}
+  const log=G.hist.map(h=>`T${h.turno}|${h.fase}|${h.tipo_investigacao||h.base_teorica||h.conduta||'-'}|"${h.resposta}"|Δ[${h.deltas.join(',')}]|"${h.aval}"`).join('\n');
+  m.push({role:'user',content:`DIAGNÓSTICO FINAL.\nHISTÓRICO:\n${log}\nIND FINAIS:[${G.ind.join(',')}] (${IND.join(', ')})
+
+Gere diagnóstico. Pontos fortes NÃO devem repetir módulos a revisar. Sempre inclua pelo menos 1 módulo a revisar.
+JSON: {"avaliacao_geral":"2-3 parágrafos","pontos_fortes":["..."],"modulos_revisar":["tema do módulo 1..."]}`});
+  return m;
+}
+
+// API call
+async function callAPI(sys,msgs){
+  let body;
+  if(sys&&(!msgs||!msgs.length)){body={model:MODEL,max_tokens:MAXTK,messages:[{role:'user',content:sys}]};}
+  else{body={model:MODEL,max_tokens:MAXTK,messages:msgs};}
+  if(body.messages.length>2){body.messages[0].cache_control={type:'ephemeral'};}
+  const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!r.ok)throw new Error(`API ${r.status}: ${await r.text()}`);
+  const d=await r.json();
+  if(d.content&&Array.isArray(d.content))return d.content.map(c=>c.text||'').join('');
+  if(d.choices)return d.choices[0]?.message?.content||'';
+  if(typeof d==='string')return d;
+  return JSON.stringify(d);
+}
+
+// JSON parser (5 strategies)
+function parseJ(t){
+  if(!t)return null;
+  try{return JSON.parse(t);}catch(e){}
+  let m=t.match(/```(?:json)?\s*([\s\S]*?)```/);if(m)try{return JSON.parse(m[1].trim());}catch(e){}
+  m=t.match(/\{[\s\S]*\}/);if(m)try{return JSON.parse(m[0]);}catch(e){}
+  if(m){let c=m[0].replace(/,\s*([}\]])/g,'$1').replace(/'/g,'"').replace(/[\x00-\x1F\x7F]/g,' ');try{return JSON.parse(c);}catch(e){}}
+  try{const o={};const rx=/"(\w+)"\s*:\s*("(?:[^"\\]|\\.)*"|\[[\s\S]*?\]|-?\d+\.?\d*|true|false|null)/g;let mt;while((mt=rx.exec(t))!==null){try{o[mt[1]]=JSON.parse(mt[2]);}catch(e){o[mt[1]]=mt[2].replace(/^"|"$/g,'');}}if(Object.keys(o).length>0)return o;}catch(e){}
+  console.warn('Parse failed:',t.substring(0,200));return null;
+}
+
+// Init
+(function(){if(checkBlock())return;if(checkSess())return;})();
+</script>
+</body>
+</html>
