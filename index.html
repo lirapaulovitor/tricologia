@@ -556,16 +556,13 @@ body {
 
       <!-- Phase: Reason -->
       <div id="areaFw" class="hidden">
-        <div class="fsel">
-          <label style="font-size:0.78rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:block;">Base teórica predominante</label>
-          <select id="fwSel">
-            <option value="">Selecione a base teórica...</option>
-            <option value="anatomia_folicular">Anatomia funcional da unidade pilossebácea</option>
-            <option value="ciclo_capilar">Ciclo capilar e fisiologia do crescimento</option>
-            <option value="biologia_molecular">Biologia molecular e células-tronco foliculares</option>
-            <option value="microambiente">Microambiente do couro cabeludo</option>
-            <option value="semiologia">Semiologia clínica e critérios de encaminhamento</option>
-          </select>
+        <label style="font-size:0.78rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;display:block;">Base(s) teórica(s) <span style="font-weight:400;text-transform:none;font-size:0.72rem">· selecione uma ou mais</span></label>
+        <div class="inv-sel" id="fwSel" style="grid-template-columns:1fr 1fr;">
+          <div class="inv-opt" data-fw="anatomia_folicular" onclick="selFw(this)"><span class="ii">🔬</span> Anatomia da unidade pilossebácea</div>
+          <div class="inv-opt" data-fw="ciclo_capilar" onclick="selFw(this)"><span class="ii">🔄</span> Ciclo capilar e fisiologia</div>
+          <div class="inv-opt" data-fw="biologia_molecular" onclick="selFw(this)"><span class="ii">🧬</span> Biologia molecular e células-tronco</div>
+          <div class="inv-opt" data-fw="microambiente" onclick="selFw(this)"><span class="ii">🦠</span> Microambiente do couro cabeludo</div>
+          <div class="inv-opt" data-fw="semiologia" onclick="selFw(this)"><span class="ii">🩺</span> Semiologia e critérios de encaminhamento</div>
         </div>
       </div>
 
@@ -660,7 +657,7 @@ const FW={anatomia_folicular:'Anatomia funcional da unidade pilossebácea',ciclo
 const COND={protocolo_estetico:'Protocolo estético no consultório',encaminhamento:'Encaminhamento ao dermatologista',ambos:'Protocolo estético + encaminhamento',orientacao:'Orientação e acompanhamento'};
 const INVT={anamnese:'Anamnese dirigida',visual:'Observação visual do couro cabeludo',haste:'Avaliação da haste capilar',historico:'Histórico de exposições e procedimentos'};
 
-let G={level:null,turn:0,maxTurns:0,phases:[],ind:[65,65,70,65],hist:[],brief:null,phase:'observe',inv:[],fw:null,dec:null,consults:[],over:false,diag:null};
+let G={level:null,turn:0,maxTurns:0,phases:[],ind:[65,65,70,65],hist:[],brief:null,phase:'observe',inv:[],fw:[],dec:null,consults:[],over:false,diag:null};
 
 // Theme
 function toggleTheme(){
@@ -755,7 +752,14 @@ function updGauges(deltas){
 // Investigation (multi-select)
 function selInv(el){
   el.classList.toggle('sel');
-  G.inv=Array.from(document.querySelectorAll('.inv-opt.sel')).map(o=>o.dataset.inv);
+  G.inv=Array.from(document.querySelectorAll('#invSel .inv-opt.sel')).map(o=>o.dataset.inv);
+  valForm();
+}
+
+// Framework (multi-select)
+function selFw(el){
+  el.classList.toggle('sel');
+  G.fw=Array.from(document.querySelectorAll('#fwSel .inv-opt.sel')).map(o=>o.dataset.fw);
   valForm();
 }
 
@@ -764,7 +768,7 @@ function valForm(){
   const wc=countW($('rTxt').value),p=G.phase;
   let ok=wc>=50;
   if(p==='observe'&&(!G.inv||!G.inv.length))ok=false;
-  if(p==='reason'&&!$('fwSel').value)ok=false;
+  if(p==='reason'&&(!G.fw||!G.fw.length))ok=false;
   if(p==='decide'&&!$('decSel').value)ok=false;
   $('btnSub').disabled=!ok;
 }
@@ -776,7 +780,6 @@ document.addEventListener('DOMContentLoaded',()=>{
     $('wcDiv').className='wc '+(wc>=50?'suf':'ins');
     valForm();
   });
-  $('fwSel').addEventListener('change',()=>{G.fw=$('fwSel').value;valForm();});
   $('decSel').addEventListener('change',()=>{G.dec=$('decSel').value;valForm();});
 });
 
@@ -784,7 +787,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 async function startGame(){
   if(!selLvl)return;
   const lv=LVLS[selLvl];
-  G={level:selLvl,turn:1,maxTurns:lv.turns,phases:lv.phases,ind:[65,65,70,65],hist:[],brief:null,phase:'observe',inv:[],fw:null,dec:null,consults:[],over:false,diag:null};
+  G={level:selLvl,turn:1,maxTurns:lv.turns,phases:lv.phases,ind:[65,65,70,65],hist:[],brief:null,phase:'observe',inv:[],fw:[],dec:null,consults:[],over:false,diag:null};
   hide('ovLvl');show('gameScr');
   renderGauges();updatePhaseUI();updateTurn();
   $('narrTxt').textContent='';$('sceneLbl').textContent='Preparando atendimento...';
@@ -813,7 +816,7 @@ async function submitTurn(){
   const txt=$('rTxt').value.trim(),ph=G.phase;
   const td={turno:G.turn,fase:ph,resposta:txt};
   if(ph==='observe')td.tipo_investigacao=Array.isArray(G.inv)?G.inv:([G.inv].filter(Boolean));
-  else if(ph==='reason')td.base_teorica=$('fwSel').value;
+  else if(ph==='reason')td.base_teorica=Array.isArray(G.fw)?G.fw:([G.fw].filter(Boolean));
   else if(ph==='decide')td.conduta=$('decSel').value;
   td.pareceres=G.consults.slice();
   _lastTd=td;
@@ -849,15 +852,16 @@ async function submitTurn(){
     if(G.ind[2]<=15||G.ind[3]<=15){G.over=true;await endGame('derrota',parsed.narrativa||'Indicadores críticos.');return;}
     if(G.turn>=G.maxTurns){G.over=true;await endGame(null,null);return;}
 
-    G.turn++;G.phase=getPhase(G.turn);G.inv=[];G.consults=[];
+    G.turn++;G.phase=getPhase(G.turn);G.inv=[];G.fw=[];G.consults=[];
     updateTurn();updatePhaseUI();renderGauges();
     $('sceneLbl').textContent=`Turno ${G.turn} · ${phLabel(G.phase)}`;
     $('narrTxt').textContent=parsed.narrativa||'';
     // Restore form
     document.querySelector('.rform').classList.remove('hidden');
     document.querySelector('.arow').classList.remove('hidden');
-    if(G.phase==='observe'){show('areaInv');document.querySelectorAll('.inv-opt').forEach(o=>o.classList.remove('sel'));}
-    $('rTxt').value='';$('rTxt').disabled=false;$('wcTxt').textContent='0 palavras';$('wcDiv').className='wc';$('fwSel').value='';$('decSel').value='';
+    if(G.phase==='observe'){show('areaInv');document.querySelectorAll('#invSel .inv-opt').forEach(o=>o.classList.remove('sel'));}
+    document.querySelectorAll('#fwSel .inv-opt').forEach(o=>o.classList.remove('sel'));
+    $('rTxt').value='';$('rTxt').disabled=false;$('wcTxt').textContent='0 palavras';$('wcDiv').className='wc';$('decSel').value='';
     valForm();saveSess();
   }else{
     showRetryUI(lastErr);
@@ -939,7 +943,7 @@ function renderRpt(){
   let h=`<div class="rpt-head"><h1>🌱 Raiz — Relatório de Atendimento</h1><p>${lv.label} · ${G.maxTurns} turnos · ${new Date().toLocaleDateString('pt-BR')}</p></div>`;
   h+=`<div class="rpt-sec"><h3>Caso clínico</h3><div class="rpt-turn"><div class="rpt-lbl">Cliente</div><div class="rpt-txt">${G.brief?`${G.brief.nome_cliente} — "${G.brief.queixa_principal}"`:'N/A'}</div></div></div>`;
   h+=`<div class="rpt-sec"><h3>Indicadores finais</h3>${IND.map((n,i)=>`<div class="rpt-turn" style="display:flex;justify-content:space-between;align-items:center"><span class="rpt-lbl">${n}</span><span style="font-family:var(--font-mono);font-weight:600">${G.ind[i]}/100</span></div>`).join('')}</div>`;
-  h+=`<div class="rpt-sec"><h3>Histórico de turnos</h3>${G.hist.map(t=>{const invLabel=t.tipo_investigacao&&t.tipo_investigacao.length?(' · '+t.tipo_investigacao.map(i=>INVT[i]||i).join(', ')):'';return`<div class="rpt-turn"><div class="rpt-lbl">Turno ${t.turno} · ${phLabel(t.fase)}${invLabel}${t.base_teorica?' · '+FW[t.base_teorica]:''}${t.conduta?' · '+COND[t.conduta]:''}</div><div class="rpt-txt">${t.resposta}</div>${t.aval?`<div class="rpt-txt" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-light);color:var(--text-muted);font-size:0.82rem">📝 ${t.aval}</div>`:''}</div>`;}).join('')}</div>`;
+  h+=`<div class="rpt-sec"><h3>Histórico de turnos</h3>${G.hist.map(t=>{const invLabel=t.tipo_investigacao&&t.tipo_investigacao.length?(' · '+t.tipo_investigacao.map(i=>INVT[i]||i).join(', ')):'';const fwLabel=t.base_teorica&&t.base_teorica.length?(' · '+t.base_teorica.map(f=>FW[f]||f).join(', ')):'';return`<div class="rpt-turn"><div class="rpt-lbl">Turno ${t.turno} · ${phLabel(t.fase)}${invLabel}${fwLabel}${t.conduta?' · '+COND[t.conduta]:''}</div><div class="rpt-txt">${t.resposta}</div>${t.aval?`<div class="rpt-txt" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-light);color:var(--text-muted);font-size:0.82rem">📝 ${t.aval}</div>`:''}</div>`;}).join('')}</div>`;
   h+=`<div class="rpt-sec"><h3>Avaliação final</h3><div class="rpt-turn"><div class="rpt-txt">${d.avaliacao_geral||'N/A'}</div></div></div>`;
   if(d.pontos_fortes)h+=`<div class="rpt-sec"><h3>Pontos fortes</h3>${d.pontos_fortes.map(p=>`<div class="rpt-turn"><div class="rpt-txt">✓ ${p}</div></div>`).join('')}</div>`;
   if(d.modulos_revisar)h+=`<div class="rpt-sec"><h3>Temas para revisão</h3>${d.modulos_revisar.map(m=>`<div class="rpt-turn"><div class="rpt-txt">↻ ${m}</div></div>`).join('')}</div>`;
@@ -983,7 +987,8 @@ function renderState(){
   if(G.brief){$('pfName').textContent=G.brief.nome_cliente||'Cliente';$('pfQueixa').textContent=`"${G.brief.queixa_principal||'...'}"`;$('pfAvatar').textContent=G.brief.genero==='F'?'👩':'👨';}
   $('sceneLbl').textContent=`Turno ${G.turn} · ${phLabel(G.phase)}`;
   $('narrTxt').textContent='Sessão restaurada. Continue seu atendimento.';
-  if(G.phase==='observe'){show('areaInv');document.querySelectorAll('.inv-opt').forEach(o=>o.classList.remove('sel'));}
+  if(G.phase==='observe'){show('areaInv');document.querySelectorAll('#invSel .inv-opt').forEach(o=>o.classList.remove('sel'));}
+  document.querySelectorAll('#fwSel .inv-opt').forEach(o=>o.classList.remove('sel'));
   $('rTxt').value='';$('rTxt').disabled=false;valForm();
 }
 
@@ -1062,14 +1067,14 @@ function buildTurnMsgs(td){
   }
   // History (compacted)
   if(G.hist.length>0){
-    const log=G.hist.map(h=>`T${h.turno}|${h.fase}|${Array.isArray(h.tipo_investigacao)?h.tipo_investigacao.join('+'):(h.base_teorica||h.conduta||'-')}|"${h.resposta.substring(0,200)}"|Δ[${h.deltas.join(',')}]`).join('\n');
+    const log=G.hist.map(h=>{const inv=Array.isArray(h.tipo_investigacao)?h.tipo_investigacao.join('+'):'';const fw=Array.isArray(h.base_teorica)?h.base_teorica.join('+'):'';return`T${h.turno}|${h.fase}|${inv||fw||h.conduta||'-'}|"${h.resposta.substring(0,200)}"|Δ[${h.deltas.join(',')}]`;}).join('\n');
     m.push({role:'user',content:`HISTÓRICO:\n${log}\nInd:[${G.ind.join(',')}]`});
     m.push({role:'assistant',content:'Registrado.'});
   }
   // Current turn
   let p=`TURNO ${td.turno}/${G.maxTurns} — Fase: ${td.fase.toUpperCase()}`;
   if(td.tipo_investigacao&&td.tipo_investigacao.length)p+=`\nInvestigações escolhidas: ${td.tipo_investigacao.map(i=>INVT[i]).join(', ')}`;
-  if(td.base_teorica)p+=`\nBase teórica: ${FW[td.base_teorica]}`;
+  if(td.base_teorica&&td.base_teorica.length)p+=`\nBases teóricas: ${td.base_teorica.map(f=>FW[f]).join(', ')}`;
   if(td.conduta)p+=`\nConduta: ${COND[td.conduta]}`;
   if(td.pareceres.length)p+=`\nPareceres solicitados: ${td.pareceres.join(', ')}`;
   p+=`\n\nRESPOSTA DO ALUNO:\n"${td.resposta}"\n\nAvalie e retorne JSON.`;
@@ -1093,7 +1098,7 @@ JSON: {"parecer":"texto"}`});
 function buildDiagMsgs(){
   const m=[];
   if(G.brief){m.push({role:'user',content:'CASO DO CLIENTE'});m.push({role:'assistant',content:JSON.stringify(G.brief)});}
-  const log=G.hist.map(h=>`T${h.turno}|${h.fase}|${Array.isArray(h.tipo_investigacao)?h.tipo_investigacao.join('+'):(h.base_teorica||h.conduta||'-')}|"${h.resposta}"|Δ[${h.deltas.join(',')}]|"${h.aval}"`).join('\n');
+  const log=G.hist.map(h=>{const inv=Array.isArray(h.tipo_investigacao)?h.tipo_investigacao.join('+'):'';const fw=Array.isArray(h.base_teorica)?h.base_teorica.join('+'):'';return`T${h.turno}|${h.fase}|${inv||fw||h.conduta||'-'}|"${h.resposta}"|Δ[${h.deltas.join(',')}]|"${h.aval}"`;}).join('\n');
   m.push({role:'user',content:`DIAGNÓSTICO FINAL.\nHISTÓRICO:\n${log}\nIND FINAIS:[${G.ind.join(',')}] (${IND.join(', ')})
 
 Gere diagnóstico. Pontos fortes NÃO devem repetir módulos a revisar. Sempre inclua pelo menos 1 módulo a revisar.
